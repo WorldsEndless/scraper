@@ -1,8 +1,9 @@
-(ns scraper.handler
+(ns scraper.general-conference
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [net.cgrand.enlive-html :as html])
   (:import [java.net URL]
            [java.io File]))
@@ -78,13 +79,57 @@
         (->> (apply str)) ; strings -> one string
         (clojure.string/replace "href=\"/" "href=\"http://catalog.byu.edu/" ) ; fix links
         )))
-;;(get-requirements "comparative-arts-and-letters" "classical-studies-classics-ba")
 
-(defroutes app-routes
-  (GET "/requirements/:dept/:program" [dept program] (get-requirements dept program))
-  ;;http://localhost:3000/requirements/comparative-arts-and-letters/art-history-curatorial-studies-ba
-  (GET "/" [] "Hello World")
-  (route/not-found "Not Found"))
+(defn get-title [talk]
+  (-> (html/select talk [:div.title-block :div]) first :content first))
 
-(def app
-  (wrap-defaults app-routes site-defaults))
+(defn get-author [talk]
+  (-> (html/select talk [:a.article-author__name]) first :content first))
+
+(defn get-content [talk] (html/select talk [:div.body-block]))
+
+(defn get-references [talk] (html/select talk [:footer.notes :ol]))
+
+(defn make-filename [name]
+  (-> name
+      (clojure.string/replace #" " "-")
+      (clojure.string/replace #"[^a-zA-Z-]" "")))
+
+(defn gc [& [dirpath]]
+  (let [dirpath (or dirpath "/home/torysa/Documents/Gospel_Files/General_Conference/20172")
+        talks (filter (fn [file]
+                        (and
+                         (.isFile file)
+                         (re-matches #"[^.]+" (str file))))
+                      (-> dirpath io/file file-seq sort))
+        html-talks (map html/html-resource talks)
+        output-path "/home/torysa/Documents/Gospel_Files/General_Conference/20172/org/"
+        single-output-file (str output-path "all.org")]
+    (println "writing to " single-output-file)
+    (doseq [talk html-talks]
+      (let [title (get-title talk)
+            author (get-author talk)
+            enlive-html-content (get-content talk)
+            html-content-string (reduce str (html/emit* enlive-html-content))
+            html-references-string (reduce str (html/emit* (get-references talk)))
+            org-doc (:out
+                     (clojure.java.shell/sh "pandoc" "-f" "html" "-t" "org" :in (str
+                                                                                 "<h1>" title " (" (subs author 3) ")</h1>"
+                                                                                 "<h2>Contents</h2>" html-content-string
+                                                                                 "<h2>References</h2>" html-references-string)))
+            output-file-name  (->> author
+                              make-filename
+                              (drop 3)
+                              (apply str)
+                              ((fn [authstr]
+                                 (str
+                                  authstr
+                                  "-"
+                                  (make-filename title)
+                                  ".org"))))
+            ]
+        (do
+          (println "Processing " title)
+          (spit single-output-file org-doc :append true)
+          ;(spit (str output-path output-file-name) org-doc)
+          )))))
