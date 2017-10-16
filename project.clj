@@ -15,8 +15,9 @@
                    ;:destination "/ssh:humpre:/srv/wildfly/"
                    :resource-paths ["war-resources"]
                    :context-path "/"}}
-  :ring {:handler scraper.handler/app}
-  :main 
+  :ring {:handler scraper.handler/app
+         :uberwar-name "scraper.war"}
+  
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.0"]]}})
