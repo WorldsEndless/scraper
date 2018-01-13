@@ -13,24 +13,28 @@
     (str base dept "/" program)))
 
 (defn get-requirements [dept program]
-  (let [url (gen-catalog-url dept program)
-        selector [:#content]
-        cut-out [:div.field-name-field-program-outcomes]]
-    (-> url
-        URL.
-        html/html-resource
-        (html/select selector)
-        ;; TODO remove the "program outcomes" section
-        (html/transform cut-out (html/substitute nil))
-        html/emit* ; to strings
-        (->> (apply str)) ; strings -> one string
-        (clojure.string/replace "href=\"/" "href=\"http://catalog.byu.edu/" ) ; fix links
-        )))
+  ;; (def dept "comparative-arts-and-letters")
+  ;; (def program "classical-studies-classics-ba")
+  (def dept "AmerStudies")
+  (def program "arabic-minor")
+  (-> (gen-catalog-url dept program)
+      URL.
+      html/html-resource
+      (html/select [:#content])
+      ;; TODO remove the "program outcomes" section
+      (html/transform
+       [:div.field-name-field-program-outcomes]
+       (html/substitute nil))
+      html/emit*
+      (->> (apply str))
+      (clojure.string/replace "href=\"/" "href=\"http://catalog.byu.edu/")))
+;;(gen-catalog-url "comparative-arts-and-letters" "classical-studies-classics-ba")
 ;;(get-requirements "comparative-arts-and-letters" "classical-studies-classics-ba")
 
 (defroutes app-routes
   (GET "/requirements/:dept/:program" [dept program] (get-requirements dept program))
   ;;http://localhost:3000/requirements/comparative-arts-and-letters/art-history-curatorial-studies-ba
+  ;; http://humpre.byu.edu/scraper/requirements/asian-and-near-eastern-languages/arabic-minor
   (GET "/" [] "Hello World")
   (route/not-found "Not Found"))
 
