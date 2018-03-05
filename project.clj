@@ -7,7 +7,8 @@
                  [ring/ring-defaults "0.1.5"]
                  [cheshire "5.8.0"]
                  [clj-http "3.7.0"]
-                 [enlive "1.1.6"]]
+                 [enlive "1.1.6"]
+                 [clj-tagsoup "0.3.0"]]
   :plugins [[lein-ring "0.9.7"]
             [lein-immutant "2.1.0"]]
   :immutant {

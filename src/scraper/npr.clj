@@ -3,7 +3,8 @@
             [compojure.route :as route]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [clojure.java.io :as io]
-            [net.cgrand.enlive-html :as html])
+            [net.cgrand.enlive-html :as html]
+            [pl.danieljanus.tagsoup :as ts])
     (:import [java.net URL]
              [java.io File]))
 
@@ -34,10 +35,14 @@
     (clojure.string/join "\n\n" smap)))
 
 (defn get-allthingsconsidered []
-  (let [archive-url "http://www.npr.org/programs/all-things-considered/archive" ; This will be offline saved html
+  (let [archive-url "https://www.npr.org/programs/all-things-considered/archive" ; This will be offline saved html
             ;;; -- Whole archive, needs to be browser-viewed to the end
-        archive-url "file:///home/torysa/Downloads/AllThingsConsidered.html"
-        html-base (-> archive-url URL. html/html-resource)
+        ;; https://www.npr.org/programs/all-things-considered/archive?date=2018-01-27&eid=581277278
+        ;; https://www.npr.org/programs/all-things-considered/archive?date=2018-01-22&eid=579629874
+        ;archive-url "file:///home/torysa/Downloads/AllThingsConsidered.html"
+        html-base (-> archive-url
+                      URL.
+                      html/html-resource)
         initial-archives (html/select html-base [:#episodelist :.episodeArchiveWrapper])
         initial-stories-info (extract-stories initial-archives)
         infinite-stories (html/select html-base [:#infinitescroll])
@@ -56,3 +61,15 @@
         (->> surl
              get-story-text
              (spit out-url))))))
+
+
+
+;; it takes the data-episode-date and data-episode-id of the last element in the infinite scroll and requests the next from there
+;; 
+;;https://www.npr.org/programs/all-things-considered/archive?date=2018-01-02&eid=575030397
+
+;; (def u2 (-> "file:///home/torysa/Downloads/AllThingsConsidered.html" URL. .openConnection))
+;; #'scraper.npr/u2
+;; scraper.npr> (.getContentType u2)
+;; text/html
+;; scraper.npr> 
